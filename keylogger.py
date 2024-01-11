@@ -1,19 +1,24 @@
+import time
 import keyboard
 
 REMAPS = {
 	'space':' ',
-	'caps lock':'<CAPS>'
+	'caps lock':'<CAPS>',
+	'backspace':'\u0008'
 }
 ENCLOSE = ['delete', 'backspace', 'enter', 'up', 'down', 'left', 'right', 'esc', 'tab', 'home', 'end', 'page up', 'page down', 'insert']
 
 class KeyLogger:
-	def __init__(self, buf_len: int = 10, collapse: bool = True, collapse_threshold: int = 3):
+	def __init__(self, update_callback, buf_len: int = 10, collapse: bool = True, collapse_threshold: int = 3, timeout: int = 2):
 		super().__init__()
 		self.__buf_len = buf_len
 		self.__collapse = collapse
 		self.__collapse_threshold = collapse_threshold
 		self.__queue = []
 		self.__mod_list = []
+		self.__update_callback = update_callback
+		self.__most_recent = time.time()
+		self.__timeout = timeout
 
 	def enqueue(self, item):
 		if not self.__queue or self.__queue[-1][0] != item:
@@ -39,9 +44,15 @@ class KeyLogger:
 				outstr += item[0]*item[1]
 			else:
 				outstr += f'{item[0]}x{item[1]}'
-		return f'[{outstr}]'
+		return outstr
 
 	def key_pressed(self, e):
+		if not self.__most_recent:
+			self.__most_recent = time.time()
+		else:
+			if time.time() - self.__most_recent > self.__timeout:
+				self.__queue = []
+			self.__most_recent = time.time()
 		if e.event_type == keyboard.KEY_DOWN:
 			name = e.name
 			if name in REMAPS.keys():
@@ -56,6 +67,7 @@ class KeyLogger:
 					self.enqueue(f'<{"-".join(self.__mod_list + [name])}>')
 				else:
 					self.enqueue(name)
-				print('\r' + str(self) + ' '*40, end='')
+				# print('\r' + str(self) + ' '*40, end='')
+				self.__update_callback(str(self))
 		elif e.event_type == keyboard.KEY_UP and e.name in self.__mod_list:
 			self.__mod_list.remove(e.name)
