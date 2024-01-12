@@ -4,12 +4,12 @@ import keyboard
 REMAPS = {
 	'space':' ',
 	'caps lock':'<CAPS>',
-	'backspace':'\u0008'
+	#'backspace':'\u0008'
 }
 ENCLOSE = ['delete', 'backspace', 'enter', 'up', 'down', 'left', 'right', 'esc', 'tab', 'home', 'end', 'page up', 'page down', 'insert']
 
 class KeyLogger:
-	def __init__(self, update_callback, buf_len: int = 10, collapse: bool = True, collapse_threshold: int = 3, timeout: int = 2):
+	def __init__(self, update_callback, buf_len: int = 100, collapse: bool = True, collapse_threshold: int = 3, timeout: int = 2):
 		super().__init__()
 		self.__buf_len = buf_len
 		self.__collapse = collapse
