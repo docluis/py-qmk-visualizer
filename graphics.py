@@ -1,5 +1,9 @@
 import tkinter
+import keyboard
 import qmk
+
+LETTERS = [c for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ']
+
 
 class Overlay:
 	def __init__(self, width: int = 400, height: int = 300, x_offset: int = 0, y_offset: int = 0, keyboard=None, key_size=None): 
@@ -9,11 +13,12 @@ class Overlay:
 		self.collapsed_height = 60
 		self.expanded_height = height
 		self.anchor_x = self.root.winfo_screenwidth()-width-x_offset
-		self.anchor_y = self.root.winfo_screenheight()-self.collapsed_height-x_offset
+		self.anchor_y = self.root.winfo_screenheight()-self.collapsed_height-y_offset
 		self.keyboard = keyboard
 		self.key_size = key_size
 
 		self.update_callback = self.update
+		self.keyevent_callback = self.handle_keyevent
 		self.char_lim = int(self.width // 20)
 
 		self.expanded = False
@@ -87,6 +92,8 @@ class Overlay:
 			self.layer_buttons[0].select()
 			
 			self.key_vars = []
+			self.key_labels = []
+			self.key_frames = []
 			keyboard_width = self.width * 0.9
 			keyboard_height = self.expanded_height * 0.9
 			if not self.key_size:
@@ -115,15 +122,21 @@ class Overlay:
 				key_frame = tkinter.Frame(self.layout_frame, width=key.width*key_size-key_reduction, height=key.height*key_size-key_reduction, bg='#403d52') 
 				key_var = tkinter.StringVar()
 				key_var.set(self.keyboard.keymaps[0][i])
-				key_lab = tkinter.Label(key_frame, textvariable=key_var, font=('Courier', 8), fg='#e0def4', bg='#403d52')
+				key_lab = tkinter.Label(key_frame, textvariable=key_var, font=('Courier', 6), fg='#e0def4', bg='#403d52')
 				key_lab.place(anchor='center', x=(key.width*key_size-key_reduction)/2, y=(key.height*key_size-key_reduction)/2)
 				self.key_vars.append(key_var)
 				key_frame.place(anchor='center', x=key.x*key_size+key.width*key_size/2, y=key.y*key_size+key.height*key_size/2)
+				self.key_labels.append(key_lab)
+				self.key_frames.append(key_frame)
 
 	def change_layer(self):
-		for label, key in zip(self.key_vars, self.keyboard.keymaps[self.layer.get()]):
-			label.set(key)
-	
+		for key_var, label, key in zip(self.key_vars, self.key_labels, self.keyboard.keymaps[self.layer.get()]):
+			key_var.set(key)
+			font_size=8
+			if '\n' in key or len(key) > 2:
+				font_size=6
+			label.configure(font=('Courier', font_size))
+
 	def expand_callback(self):
 		if not self.expanded and self.keyboard:
 			self.expand_button_text.set('v')
@@ -144,6 +157,36 @@ class Overlay:
 			text = text[-self.char_lim:]
 		self.log_text.set(text)
 
+	def handle_keyevent(self, name, etype):
+		layer = self.layer.get()
+		if name in qmk.keyboard2qmk.keys():
+			name = self.keyboard.process_key(qmk.keyboard2qmk[name])
+		else:
+			name = name.upper()
+		if name in self.keyboard.keymaps[layer]:
+			print(f'{name} in current layer')
+		else:
+			found = False
+			for i, keymap in enumerate(self.keyboard.keymaps):
+				if name in keymap:
+					print(f'found {name} in layer {i}, switching layer')
+					self.layer_buttons[i].select()
+					self.change_layer()
+					layer=i
+					found=True
+					break
+			if not found:
+				print(f'{name} not found on any layer')
+				return
+		index = self.keyboard.keymaps[layer].index(name)
+		if etype == keyboard.KEY_DOWN:
+			self.key_labels[index].configure(fg='#191724', bg='#eb6f92')
+			self.key_frames[index].configure(bg='#eb6f92')
+		elif etype == keyboard.KEY_UP:
+			self.key_labels[index].configure(fg='#e0def4', bg='#403d52')
+			self.key_frames[index].configure(bg='#403d52')
+
 	def run(self):
 		self.log_text.set("")
+		self.change_layer()
 		self.root.mainloop()

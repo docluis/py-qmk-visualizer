@@ -9,7 +9,7 @@ REMAPS = {
 ENCLOSE = ['delete', 'backspace', 'enter', 'up', 'down', 'left', 'right', 'esc', 'tab', 'home', 'end', 'page up', 'page down', 'insert']
 
 class KeyLogger:
-	def __init__(self, update_callback, buf_len: int = 100, collapse: bool = True, collapse_threshold: int = 3, timeout: int = 2):
+	def __init__(self, update_callback, keyevent_callback, buf_len: int = 100, collapse: bool = True, collapse_threshold: int = 3, timeout: int = 2):
 		super().__init__()
 		self.__buf_len = buf_len
 		self.__collapse = collapse
@@ -17,6 +17,7 @@ class KeyLogger:
 		self.__queue = []
 		self.__mod_list = []
 		self.__update_callback = update_callback
+		self.__keyevent_callback = keyevent_callback
 		self.__most_recent = time.time()
 		self.__timeout = timeout
 
@@ -47,6 +48,8 @@ class KeyLogger:
 		return outstr
 
 	def key_pressed(self, e):
+		print(e.name)
+		self.__keyevent_callback(e.name, e.event_type)
 		if not self.__most_recent:
 			self.__most_recent = time.time()
 		else:
@@ -71,3 +74,4 @@ class KeyLogger:
 				self.__update_callback(str(self))
 		elif e.event_type == keyboard.KEY_UP and e.name in self.__mod_list:
 			self.__mod_list.remove(e.name)
+
