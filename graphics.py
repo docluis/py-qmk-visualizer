@@ -1,10 +1,20 @@
 import tkinter
 import keyboard
 import qmk
+import time
+import threading
 
 LETTERS = [c for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ']
 
-
+def blink_key(key_label, key_frame):
+	key_label.configure(fg='#191724', bg='#eb6f92')
+	key_frame.configure(bg='#eb6f92')
+	
+def unblink_key(key_label, key_frame):
+	time.sleep(0.2)
+	key_label.configure(fg='#e0def4', bg='#403d52')
+	key_frame.configure(bg='#403d52')
+			
 class Overlay:
 	def __init__(self, width: int = 400, height: int = 300, x_offset: int = 0, y_offset: int = 0, keyboard=None, key_size=None): 
 		self.root = tkinter.Tk()
@@ -34,7 +44,7 @@ class Overlay:
 		self.root.overrideredirect(True)
 		self.root.lift()
 		self.root.overrideredirect(True)
-		self.root.wm_attributes('-alpha', '0.75')
+		self.root.wm_attributes('-alpha', '0.95')
 		self.root.wm_attributes("-topmost", True)
 		self.root.configure(background='#26233a', border=2)
 		
@@ -45,7 +55,7 @@ class Overlay:
 	def setup_keylog(self):	
 		self.log_frame = tkinter.Frame(self.root, width=self.width, height=self.collapsed_height, bg='#26233a')
 		self.log_text = tkinter.StringVar()
-		self.log_text_label = tkinter.Label(self.log_frame, textvariable=self.log_text, fg='#c4a7e7', bg='#26233a', font=('Courier', 16))
+		self.log_text_label = tkinter.Label(self.log_frame, textvariable=self.log_text, fg='#c4a7e7', bg='#26233a', font=('Courier', 20))
 		self.log_text_label.place(anchor='w', x=10, y=int(self.collapsed_height/2)+5)
 		if self.keyboard:
 			self.expand_button_text = tkinter.StringVar()
@@ -121,8 +131,8 @@ class Overlay:
 			for i, key in enumerate(self.keyboard.keys):
 				key_frame = tkinter.Frame(self.layout_frame, width=key.width*key_size-key_reduction, height=key.height*key_size-key_reduction, bg='#403d52') 
 				key_var = tkinter.StringVar()
-				key_var.set(self.keyboard.keymaps[0][i])
-				key_lab = tkinter.Label(key_frame, textvariable=key_var, font=('Courier', 6), fg='#e0def4', bg='#403d52')
+				key_var.set(self.keyboard.keymaps[0][i].display)
+				key_lab = tkinter.Label(key_frame, textvariable=key_var, font=('Courier', 16), fg='#e0def4', bg='#403d52')
 				key_lab.place(anchor='center', x=(key.width*key_size-key_reduction)/2, y=(key.height*key_size-key_reduction)/2)
 				self.key_vars.append(key_var)
 				key_frame.place(anchor='center', x=key.x*key_size+key.width*key_size/2, y=key.y*key_size+key.height*key_size/2)
@@ -132,10 +142,10 @@ class Overlay:
 	def change_layer(self):
 		for key_var, label, key in zip(self.key_vars, self.key_labels, self.keyboard.keymaps[self.layer.get()]):
 			key_var.set(key)
-			font_size=8
-			if '\n' in key or len(key) > 2:
-				font_size=6
-			label.configure(font=('Courier', font_size))
+			font_size=18
+			if '\n' in key.display or len(key.display) > 2:
+				font_size=16
+			label.configure(font=('Fira Code Nerd Font', font_size))
 
 	def expand_callback(self):
 		if not self.expanded and self.keyboard:
@@ -159,11 +169,17 @@ class Overlay:
 
 	def handle_keyevent(self, name, etype):
 		layer = self.layer.get()
+		original_name = name
 		if name in qmk.keyboard2qmk.keys():
 			name = self.keyboard.process_key(qmk.keyboard2qmk[name])
 		else:
 			name = name.upper()
-		if name in self.keyboard.keymaps[layer]:
+
+		print(f"original name: {original_name}, processed name: {name}")
+
+		# for key in self.keyboard.keymaps[layer]:
+		# 	print(f'{repr(key.key)} -> {repr(key.display)}')
+		if name in [key.key for key in self.keyboard.keymaps[layer]]:
 			print(f'{name} in current layer')
 		else:
 			found = False
@@ -178,13 +194,27 @@ class Overlay:
 			if not found:
 				print(f'{name} not found on any layer')
 				return
-		index = self.keyboard.keymaps[layer].index(name)
+		index = [key.key for key in self.keyboard.keymaps[layer]].index(name)
+		print(f'index: {index}')
+		# if etype == keyboard.KEY_DOWN:
+		# 	self.key_labels[index].configure(fg='#191724', bg='#eb6f92')
+		# 	self.key_frames[index].configure(bg='#eb6f92')
+		# elif etype == keyboard.KEY_UP:
+		# 	self.key_labels[index].configure(fg='#e0def4', bg='#403d52')
+		# 	self.key_frames[index].configure(bg='#403d52')
 		if etype == keyboard.KEY_DOWN:
-			self.key_labels[index].configure(fg='#191724', bg='#eb6f92')
-			self.key_frames[index].configure(bg='#eb6f92')
-		elif etype == keyboard.KEY_UP:
-			self.key_labels[index].configure(fg='#e0def4', bg='#403d52')
-			self.key_frames[index].configure(bg='#403d52')
+			t = threading.Thread(target=blink_key, args=(self.key_labels[index], self.key_frames[index]))
+			t.start()
+		if etype == keyboard.KEY_UP:
+			t = threading.Thread(target=unblink_key, args=(self.key_labels[index], self.key_frames[index]))
+			t.start()
+
+		# if etype == keyboard.KEY_UP:
+		# 	# print(f"up: {name}")
+		# 	# self.key_labels[index].configure(fg='#e0def4', bg='#403d52')
+		# 	# self.key_frames[index].configure(bg='#403d52')
+
+
 
 	def run(self):
 		self.log_text.set("")

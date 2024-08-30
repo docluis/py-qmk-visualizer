@@ -71,7 +71,10 @@ KC = {
 	'RGHT':'⮞',
 	'WBAK':'⮨',
 	'WFWD':'⮩',
-	'WREF':'⭮'
+	'WREF':'⭮',
+	# translate to layer below
+	'TRNS':'',
+	'NO':"🔴",
 }
 
 for key, value in KC.items():
@@ -93,6 +96,13 @@ class Key:
 	def __str__(self):
 		return f'(x: {self.x}, y: {self.y}): {self.width}x{self.height}'
 
+class KeymapEntry:
+	def __init__(self, key, display):
+		self.key = key
+		self.display = key if display == None else display
+
+	def __str__(self):
+		return f'{self.display}'
 
 class Keyboard:
 	def __init__(self, keyboard_file = ''):
@@ -128,8 +138,27 @@ class Keyboard:
 		for unprocessed in unprocessed_keymaps:
 			processed = []
 			for key in unprocessed:
-				processed.append(self.process_key(key))
+				display = None
+				# layer switching key like LT(6,KC_I)
+				if key.startswith('LT('):
+					layer = key.split(',')[0][3:]
+					# print(f'layer: {layer}')
+					main_key = key.split(',')[1].split(')')[0]
+					main_key = self.process_key(main_key)
+					display = f'{main_key}\n(🔵{layer})'
+					# print(f"key: {key}, display: {display}, main_key: {main_key}")
+					# print(f'key: {key}')
+					processed.append(KeymapEntry(main_key, display))
+				elif key.startswith(("LSFT_T", "LCTL_T", "LALT_T", "RSFT_T", "RCTL_T", "RALT_T")):
+					mode = key[:4]
+					main_key = key.split('(')[1].split(')')[0]
+					main_key = self.process_key(main_key)
+					display = f'{main_key}\n({mode})'
+					processed.append(KeymapEntry(main_key, display))
+				else:
+					processed.append(KeymapEntry(self.process_key(key), display))
 			self.keymaps.append(processed)
+			# print(f'processed: {processed}')
 
 	def process_key(self, key):
 		if key.startswith('KC_'):
@@ -138,6 +167,26 @@ class Keyboard:
 				return KC[key]
 			else:
 				return key
+		elif key.startswith('LT('):
+			# LT(5,KC_R) make this to R (5)
+			# LT(7,KC_SPC) make this to KC[key] (7)
+			layer = key.split(',')[0][3:]
+			key = key.split(',')[1].split(')')[0]
+			if key.startswith('KC_'):
+				key = key[3:]
+				if key in KC.keys():
+					key = KC[key]
+			return f'{key}\n({layer})'
+		elif key.startswith(("LSFT_T", "LCTL_T", "LALT_T", "RSFT_T", "RCTL_T", "RALT_T")):
+			# LALT_T(KC_C) make this to C (ALT)
+			mode = key[:4]
+			key = key.split('(')[1].split(')')[0]
+			if key.startswith('KC_'):
+				key = key[3:]
+				if key in KC.keys():
+					key = KC[key]
+			return f'{key}\n({mode})'
+
 		elif '(' in key and ')' in key:
 			parts = key.split('(')
 			wrapper = parts[0]
