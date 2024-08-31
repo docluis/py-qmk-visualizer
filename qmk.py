@@ -149,6 +149,12 @@ class Keyboard:
 					# print(f"key: {key}, display: {display}, main_key: {main_key}")
 					# print(f'key: {key}')
 					processed.append(KeymapEntry(main_key, display))
+				elif key.startswith('LT'):
+					# alternative custom keys like LT1_S
+					layer = key[2]
+					main_key = key[4:]
+					display = f'{main_key}\n(🔵{layer})'
+					processed.append(KeymapEntry(main_key, display))
 				elif key.startswith(("LSFT_T", "LCTL_T", "LALT_T", "LGUI_T", "RSFT_T", "RCTL_T", "RALT_T", "RGUI_T")):
 					mode = key[1:4]
 					main_key = key.split('(')[1].split(')')[0]

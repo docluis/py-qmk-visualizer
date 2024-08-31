@@ -226,7 +226,7 @@ class Overlay:
 			self.change_layer()
 		else:
 			self.back_to_0 = False
-			time.sleep(0.1)
+			time.sleep(0.19)
 			if not self.back_to_0:
 				self.layer_buttons[layer].select()
 				self.change_layer()
