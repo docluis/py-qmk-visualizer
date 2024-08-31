@@ -29,6 +29,8 @@ class Overlay:
 
 		self.update_callback = self.update
 		self.keyevent_callback = self.handle_keyevent
+		self.layerswitch_callback = self.handle_layerswitch
+		self.back_to_0 = False
 		self.char_lim = int(self.width // 20)
 
 		self.expanded = False
@@ -175,27 +177,28 @@ class Overlay:
 		else:
 			name = name.upper()
 
-		print(f"original name: {original_name}, processed name: {name}")
+		# print(f"original name: {original_name}, processed name: {name}")
 
 		# for key in self.keyboard.keymaps[layer]:
 		# 	print(f'{repr(key.key)} -> {repr(key.display)}')
 		if name in [key.key for key in self.keyboard.keymaps[layer]]:
-			print(f'{name} in current layer')
+			# print(f'{name} in current layer')
+			pass
 		else:
 			found = False
 			for i, keymap in enumerate(self.keyboard.keymaps):
 				if name in keymap:
-					print(f'found {name} in layer {i}, switching layer')
+					# print(f'found {name} in layer {i}, switching layer')
 					self.layer_buttons[i].select()
 					self.change_layer()
 					layer=i
 					found=True
 					break
 			if not found:
-				print(f'{name} not found on any layer')
+				# print(f'{name} not found on any layer')
 				return
 		index = [key.key for key in self.keyboard.keymaps[layer]].index(name)
-		print(f'index: {index}')
+		# print(f'index: {index}')
 		# if etype == keyboard.KEY_DOWN:
 		# 	self.key_labels[index].configure(fg='#191724', bg='#eb6f92')
 		# 	self.key_frames[index].configure(bg='#eb6f92')
@@ -203,9 +206,11 @@ class Overlay:
 		# 	self.key_labels[index].configure(fg='#e0def4', bg='#403d52')
 		# 	self.key_frames[index].configure(bg='#403d52')
 		if etype == keyboard.KEY_DOWN:
+			print(f"down: {name}")
 			t = threading.Thread(target=blink_key, args=(self.key_labels[index], self.key_frames[index]))
 			t.start()
 		if etype == keyboard.KEY_UP:
+			print(f"up: {name}")
 			t = threading.Thread(target=unblink_key, args=(self.key_labels[index], self.key_frames[index]))
 			t.start()
 
@@ -214,7 +219,17 @@ class Overlay:
 		# 	# self.key_labels[index].configure(fg='#e0def4', bg='#403d52')
 		# 	# self.key_frames[index].configure(bg='#403d52')
 
-
+	def handle_layerswitch(self, layer):
+		if layer == 0:
+			self.back_to_0 = True
+			self.layer_buttons[layer].select()
+			self.change_layer()
+		else:
+			self.back_to_0 = False
+			time.sleep(0.1)
+			if not self.back_to_0:
+				self.layer_buttons[layer].select()
+				self.change_layer()
 
 	def run(self):
 		self.log_text.set("")

@@ -9,7 +9,7 @@ REMAPS = {
 ENCLOSE = ['delete', 'backspace', 'enter', 'up', 'down', 'left', 'right', 'esc', 'tab', 'home', 'end', 'page up', 'page down', 'insert']
 
 class KeyLogger:
-	def __init__(self, update_callback, keyevent_callback, buf_len: int = 100, collapse: bool = True, collapse_threshold: int = 3, timeout: int = 2):
+	def __init__(self, update_callback, keyevent_callback, layerswitch_callback, buf_len: int = 100, collapse: bool = True, collapse_threshold: int = 3, timeout: int = 2):
 		super().__init__()
 		self.__buf_len = buf_len
 		self.__collapse = collapse
@@ -18,6 +18,7 @@ class KeyLogger:
 		self.__mod_list = []
 		self.__update_callback = update_callback
 		self.__keyevent_callback = keyevent_callback
+		self.__layerswitch_callback = layerswitch_callback
 		self.__most_recent = time.time()
 		self.__timeout = timeout
 
@@ -67,7 +68,24 @@ class KeyLogger:
 					self.__mod_list.append(name)
 			else:
 				if self.__mod_list:
-					self.enqueue(f'<{"-".join(self.__mod_list + [name])}>')
+					mod_plus_name = f'<{"-".join(self.__mod_list + [name])}>'
+					if mod_plus_name == '<alt-f1>':
+						self.__layerswitch_callback(1)
+					elif mod_plus_name == '<alt-f2>':
+						self.__layerswitch_callback(2)
+					elif mod_plus_name == '<alt-f3>':
+						self.__layerswitch_callback(3)
+					elif mod_plus_name == '<alt-f4>':
+						self.__layerswitch_callback(4)
+					elif mod_plus_name == '<alt-f5>':
+						self.__layerswitch_callback(5)
+					elif mod_plus_name == '<alt-f6>':
+						self.__layerswitch_callback(6)
+					elif mod_plus_name == '<alt-f7>':
+						self.__layerswitch_callback(7)
+					elif mod_plus_name == '<alt-f12>':
+						self.__layerswitch_callback(0)
+					self.enqueue(mod_plus_name)				
 				else:
 					self.enqueue(name)
 				# print('\r' + str(self) + ' '*40, end='')
